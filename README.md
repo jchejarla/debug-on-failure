@@ -68,7 +68,7 @@ For anything else, such as a message listener, wrap the work in `DebugOnFailure.
 
 ## Getting started with Spring Boot
 
-Requirements: Java 17 or later, Spring Boot 3, and either Logback, which is Spring Boot's default, or Log4j2.
+Requirements: Java 17 or later, Spring Boot 4, and either Logback, which is Spring Boot's default, or Log4j2. The starter does not support Spring Boot 3. The Logback, Log4j2 and servlet modules do not depend on Spring Boot, so on Spring Boot 3 they can be set up by hand, as described in [Without Spring Boot](#without-spring-boot), but this has not been tested.
 
 Add the starter:
 

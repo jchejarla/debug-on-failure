@@ -62,14 +62,14 @@ try {
 
 ### Where to hook in
 
-Look for a place in the framework that runs on the same thread just before and just after each unit of work. Most frameworks have one, under a name like interceptor, listener, advice or decorator. Check that it:
+Look for a place in the framework that runs on the same thread just before and just after each piece of work. Most frameworks have one, under a name like interceptor, listener, advice or decorator. Check that it:
 
 - runs on the thread that does the work, not the thread that receives or schedules it, and
 - runs after the work too, including when it fails.
 
 ### Example: any annotated method, with Spring AOP
 
-Many frameworks call an annotated method of your bean for each unit of work: `@KafkaListener`, `@RabbitListener`, `@JmsListener`, `@SqsListener` and others. If your application has `spring-boot-starter-aop`, one aspect covers every such method:
+Many frameworks call an annotated method of your bean for each piece of work: `@KafkaListener`, `@RabbitListener`, `@JmsListener`, `@SqsListener` and others. If your application has `spring-boot-starter-aop`, one aspect covers every such method:
 
 ```java
 @Aspect
@@ -91,7 +91,7 @@ class ListenerScopes {
 }
 ```
 
-Change the annotation in the `@Around` expression for other frameworks. If the framework retries a failed message, each attempt is its own unit of work, and each failed attempt writes its own DEBUG lines.
+Change the annotation in the `@Around` expression for other frameworks. If the framework retries a failed message, each attempt is its own piece of work, and each failed attempt writes its own DEBUG lines.
 
 ### Testing it
 
@@ -124,7 +124,7 @@ event arrives
 - **Read the scope id from the event, not from the thread.** It is in the event's MDC or context data under `DebugOnFailure.SCOPE_ID_KEY`. If reading it fails, treat the event as having no scope id and write it as usual. A line must never be lost because of debug-on-failure.
 - **Hold an independent copy, with everything filled in.** Many backends reuse event objects, and fill in some details only when an event is written: the message text, the thread name, and the line it was logged from. A held event may be written later, from another thread, and those details would then come out wrong. Fill them in before holding the event. Fill in the line it was logged from only if a layout prints it, because that is expensive.
 - **Estimate the size** of each held event, mainly from the text it carries: message, string arguments, stack trace and MDC. The store uses the estimate to enforce the memory limits. If `buffer` returns `false`, the event was dropped to stay within a limit; there is nothing else to do.
-- **Receive events on the thread that logged them.** If the backend hands events to another thread before your wrapper sees them, a unit of work can end before its events arrive. Put asynchronous writers inside your wrapper, never around it.
+- **Receive events on the thread that logged them.** If the backend hands events to another thread before your wrapper sees them, a piece of work can end before its events arrive. Put asynchronous writers inside your wrapper, never around it.
 - **Write held events through the same writers as everything else,** so they get the same format and destinations.
 
 ### Optional: automatic setup

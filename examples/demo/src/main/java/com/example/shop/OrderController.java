@@ -39,7 +39,7 @@ public class OrderController {
     @GetMapping("/orders/{id}/pay")
     public String pay(@PathVariable String id, @RequestParam(defaultValue = "4111") String card) {
         log.info("Paying for order {}", id);
-        log.debug("Order {} total 109.00, card ending {}", id, card);
+        log.debug("Order {} total 109.00, card ending {}", id, card.substring(Math.max(0, card.length() - 4)));
         payments.charge(id, card);
         mailer.sendReceipt(id);
         return "paid " + id + "\n";
