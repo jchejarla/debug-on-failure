@@ -1,6 +1,6 @@
 # Writing your own integration
 
-To decide which DEBUG lines belong together, and when to write or discard them, debug-on-failure needs to know where each piece of work starts and ends. It works this out by itself for HTTP requests, `@Scheduled` methods and `@Async` methods. For anything else, such as message listeners, RPC frameworks or your own job runner, a few lines of code tell it. This guide shows how.
+debug-on-failure groups DEBUG lines by piece of work, such as one HTTP request, and writes a group only if that piece of work fails. For HTTP requests, `@Scheduled` methods and `@Async` methods, it knows where each piece of work starts and ends without any code from you. For anything else, such as message listeners, RPC frameworks or your own job runner, you tell it with a few lines of code. This guide shows how.
 
 There are two kinds of integration:
 
@@ -54,7 +54,7 @@ try {
 ### Rules
 
 - **Begin and close on the same thread.** A scope is attached to the thread that began it, through the logging MDC. Closing it on another thread leaves the first thread attached to a closed scope.
-- **Always close, in a `finally` block.** A scope that is never closed keeps holding lines, written only at its `flush-after` interval, and its thread stays attached to it.
+- **Always close, in a `finally` block.** A scope that is never closed keeps holding lines, its thread stays attached to it, and its lines are only written when its `flush-after` time passes.
 - **Call `fail` for failures that do not throw.** Some frameworks catch the exception themselves, or report failure another way, such as sending a message to a dead-letter queue. Call `scope.fail("sent to dead-letter queue")` for those. The first reason given is the one reported.
 - **Choose a short name that identifies the work,** such as `payment 77` or `OrderJobs.importOrders`. It appears in WARN lines. Do not put personal data or secrets in it. If a better name only becomes known later, `scope.rename(...)` changes it.
 - **Use `DebugOnFailure.taskSettings()`** unless your kind of work needs different limits. In Spring Boot, those settings come from `debug-on-failure.task.*`. Otherwise, pass your own, for example `ScopeSettings.TASK.withFlushAfter(Duration.ofMinutes(2))`.
@@ -121,8 +121,8 @@ event arrives
 
 ### Rules
 
-- **Read the scope id from the event, not from the thread.** It is in the event's MDC or context data under `DebugOnFailure.SCOPE_ID_KEY`. If reading it fails, treat the event as having none and write it as usual; never lose a line because of debug-on-failure.
-- **Hold an independent copy, with everything filled in.** Many backends reuse event objects, and work out some details only when an event is written: the message text, the thread name, and where it was logged. A held event may be written later, from another thread, when those would come out wrong. Fill them in before holding the event. Work out where it was logged only if a layout prints it, since that is expensive.
+- **Read the scope id from the event, not from the thread.** It is in the event's MDC or context data under `DebugOnFailure.SCOPE_ID_KEY`. If reading it fails, treat the event as having no scope id and write it as usual. A line must never be lost because of debug-on-failure.
+- **Hold an independent copy, with everything filled in.** Many backends reuse event objects, and fill in some details only when an event is written: the message text, the thread name, and the line it was logged from. A held event may be written later, from another thread, and those details would then come out wrong. Fill them in before holding the event. Fill in the line it was logged from only if a layout prints it, because that is expensive.
 - **Estimate the size** of each held event, mainly from the text it carries: message, string arguments, stack trace and MDC. The store uses the estimate to enforce the memory limits. If `buffer` returns `false`, the event was dropped to stay within a limit; there is nothing else to do.
 - **Receive events on the thread that logged them.** If the backend hands events to another thread before your wrapper sees them, a unit of work can end before its events arrive. Put asynchronous writers inside your wrapper, never around it.
 - **Write held events through the same writers as everything else,** so they get the same format and destinations.
